@@ -10,9 +10,12 @@ class Bird extends Phaser.Physics.Arcade.Sprite {
         this.jumpTimer = null;
         this.setInteractive();
 
-        // spacebar event
         this.spaceKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.spaceKey.on('down', this.flap, this);
+        
+        // Set the initial bird position in the middle of the game screen
+        this.y = scene.sys.game.config.height / 2;
+        this.x = 64;  
     }
 
     flap() {
@@ -35,10 +38,19 @@ class Bird extends Phaser.Physics.Arcade.Sprite {
     }
     
     update() {
+        this.velocity += this.gravity;
+        this.velocity *= 0.9;
+        this.y += this.velocity;
+    
+        if (this.y < 0) {
+            this.y = 0;
+            this.velocity = 0;
+        }
+    
         if (this.y > this.scene.sys.game.config.height - this.height) {
             this.scene.gameOver();
         }
-      
+        
         this.angle = this.body.velocity.y > 0 ? 20 : -20;
         this.isFlapping = false;
     }

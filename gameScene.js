@@ -15,6 +15,7 @@ class GameScene extends Phaser.Scene {
         this.birdHoverTween;
     }
 
+    // Preloads assets for the game
     preload() {
         console.log('GameScene preload');
         this.load.image('bird', 'bird.png');
@@ -24,26 +25,30 @@ class GameScene extends Phaser.Scene {
         this.load.image('play', 'play.png'); 
     }
 
+    // Creates the game entities
     create() {
         console.log('GameScene create');
         this.addParallaxBackground();
-    
-        // ground
-        this.ground = this.add.tileSprite(0, this.sys.game.config.height - 30, this.sys.game.config.width, 60, 'bg1');
+
+        // Ground has been lowered
+        this.ground = this.add.tileSprite(0, this.sys.game.config.height, this.sys.game.config.width, 60, 'bg1');
         this.ground.setOrigin(0, 1);
         this.physics.add.existing(this.ground, true);
-    
+
         this.bird = this.physics.add.sprite(100, this.sys.game.config.height / 2, 'bird');
-        this.bird.setGravityY(200);
-    
+        this.bird.setGravityY(0);
+        this.isBirdFalling = false;
+
+        // Hover effect is more subtle
         this.birdHoverTween = this.tweens.add({
             targets: this.bird,
-            y: '+=20',
-            duration: 1000,
-            ease: 'Power2.easeInOut',
+            y: '+=5',
+            duration: 500,
+            ease: 'Sine.easeInOut',
             yoyo: true,
             repeat: -1
         });
+
     
         this.obstacleGroup = this.physics.add.group({ classType: Obstacle });
     
@@ -52,7 +57,7 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.bird, this.obstacleGroup, this.gameOver, null, this);
         this.physics.add.collider(this.bird, this.ground, this.gameOver, null, this);
     
-        this.startButton = this.add.image(400, 300, 'play').setInteractive(); 
+        this.startButton = this.add.text(400, 300, 'Click to Play', { font: "50px Arial", fill: "#000000", align: "center" }).setInteractive();
         this.startButton.on('pointerdown', () => this.startCountdown());
     
         this.countdownText = this.add.text(400, 300, '', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
@@ -63,9 +68,9 @@ class GameScene extends Phaser.Scene {
     }
     
     controlBird() {
-        if (this.isGameStarted) {
+        if (this.isGameStarted || this.isBirdFalling) {
             this.bird.setVelocityY(-350);
-        }
+        }        
     }
     
     update() {
@@ -100,6 +105,7 @@ class GameScene extends Phaser.Scene {
         this.startButton.setVisible(false);
         let counter = 3;
         this.countdownText.setText(counter);
+        this.isBirdFalling = true;
         
         this.countdown = this.time.addEvent({
             delay: 1000,
@@ -160,7 +166,7 @@ class GameScene extends Phaser.Scene {
     }
 
     gameOver() {
-        console.log('Game over');
+        this.scene.start('GameOverScene', { score: this.score });
         this.physics.pause();
 
         // Clear the obstacle group to avoid collision callback being called after game over
@@ -168,8 +174,6 @@ class GameScene extends Phaser.Scene {
 
         // Reset score
         this.score = 0;
-
-        this.scene.start('GameOverScene', { score: this.score });
     }
 
     addParallaxBackground() {
