@@ -1,6 +1,5 @@
 import GameScene from './gameScene.js';
 import GameOverScene from './GameOverScene.js';
-import StartScene from './StartScene.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -17,7 +16,7 @@ const config = {
     dom: {
         createContainer: true
     },
-    scene: [StartScene, GameScene, GameOverScene],
+    scene: [GameScene, GameOverScene],
 };
 
 const game = new Phaser.Game(config);

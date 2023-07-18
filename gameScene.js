@@ -8,6 +8,11 @@ class GameScene extends Phaser.Scene {
         this.scoreText;
         this.obstacleGroup;
         this.obstacleTimer;
+        this.isGameStarted = false; 
+        this.startButton;
+        this.countdownText;
+        this.countdown;
+        this.birdHoverTween;
     }
 
     preload() {
@@ -16,41 +21,107 @@ class GameScene extends Phaser.Scene {
         this.load.image('obstacle', 'obstacle.png');
         this.load.image('bg1', 'bg1.png');
         this.load.image('bg2', 'bg2.png');
+        this.load.image('play', 'play.png'); 
     }
-    
+
     create() {
         console.log('GameScene create');
         this.addParallaxBackground();
-
-        this.bird = new Bird(this, 100, 300, 'bird');
-
-        this.obstacleGroup = this.physics.add.group({ classType: Obstacle });
-
-        this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
-
-        this.physics.add.overlap(this.bird, this.obstacleGroup, this.gameOver, null, this);
-
-        this.startGame();
-
-        this.input.on('pointerdown', () => {
-            this.bird.flap();
+    
+        // ground
+        this.ground = this.add.tileSprite(0, this.sys.game.config.height - 30, this.sys.game.config.width, 60, 'bg1');
+        this.ground.setOrigin(0, 1);
+        this.physics.add.existing(this.ground, true);
+    
+        this.bird = this.physics.add.sprite(100, this.sys.game.config.height / 2, 'bird');
+        this.bird.setGravityY(200);
+    
+        this.birdHoverTween = this.tweens.add({
+            targets: this.bird,
+            y: '+=20',
+            duration: 1000,
+            ease: 'Power2.easeInOut',
+            yoyo: true,
+            repeat: -1
         });
+    
+        this.obstacleGroup = this.physics.add.group({ classType: Obstacle });
+    
+        this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+    
+        this.physics.add.overlap(this.bird, this.obstacleGroup, this.gameOver, null, this);
+        this.physics.add.collider(this.bird, this.ground, this.gameOver, null, this);
+    
+        this.startButton = this.add.image(400, 300, 'play').setInteractive(); 
+        this.startButton.on('pointerdown', () => this.startCountdown());
+    
+        this.countdownText = this.add.text(400, 300, '', { fontSize: '64px', fill: '#000' }).setOrigin(0.5);
+    
+        this.input.on('pointerdown', this.controlBird, this);
+        this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.spaceKey.on('down', this.controlBird, this);
     }
-
+    
+    controlBird() {
+        if (this.isGameStarted) {
+            this.bird.setVelocityY(-350);
+        }
+    }
+    
     update() {
-        this.bird.update();
-        this.updateParallaxBackground();
-
-        this.obstacleGroup.getChildren().forEach((obstacle) => {
-          obstacle.update();
-          if(obstacle.getBounds().right < this.bird.getBounds().left && !obstacle.passed){
-            obstacle.passed = true;
-            this.increaseScore();
-          }
+        if (this.isGameStarted) {
+            if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+                this.bird.setVelocityY(-350);
+            }
+    
+            this.bird.update();
+            this.updateParallaxBackground();
+    
+            // make the ground move
+            this.ground.tilePositionX += 4;
+    
+            this.obstacleGroup.getChildren().forEach((obstacle) => {
+                obstacle.update();
+                if(obstacle.getBounds().right < this.bird.getBounds().left && !obstacle.passed){
+                    obstacle.passed = true;
+                    this.increaseScore();
+                }
+            });
+        } else {
+            // If the bird falls down or flies too high while the game has not started, reposition it at the vertical middle of the scene
+            if (this.bird.y < 100 || this.bird.y > this.sys.game.config.height - this.bird.height - this.ground.height) {
+                this.bird.y = this.sys.game.config.height / 2;
+                this.bird.setVelocityY(0);
+            }
+        }
+    }
+    
+    startCountdown() {
+        this.startButton.setVisible(false);
+        let counter = 3;
+        this.countdownText.setText(counter);
+        
+        this.countdown = this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                counter--;
+                if(counter === 0) {
+                    this.startGame();
+                    this.countdownText.setText('');
+                } else {
+                    this.countdownText.setText(counter);
+                }
+            },
+            callbackScope: this,
+            repeat: 2
         });
     }
 
     startGame() {
+        this.isGameStarted = true;
+        this.birdHoverTween.remove(); 
+        this.bird.setVelocityY(-350);
+    
         this.obstacleTimer = this.time.addEvent({
             delay: 2000,
             callback: this.generateObstacle,
