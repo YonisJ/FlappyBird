@@ -9,11 +9,13 @@ class Bird extends Phaser.Physics.Arcade.Sprite {
         this.jumpAvailable = true;
         this.jumpTimer = null;
         this.setInteractive();
-        this.on('pointerdown', this.flap, this);
+
+        // spacebar event
+        this.spaceKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.spaceKey.on('down', this.flap, this);
     }
 
     flap() {
-        console.log('Flap method called');
         if (!this.jumpAvailable) return;
     
         this.setVelocityY(this.jumpForce);
@@ -32,25 +34,20 @@ class Bird extends Phaser.Physics.Arcade.Sprite {
         });
     }
     
-
     update() {
-        // If bird hits the ground, game is over
         if (this.y > this.scene.sys.game.config.height - this.height) {
             this.scene.gameOver();
         }
       
-        // Adjust the bird's angle depending on its velocity
         this.angle = this.body.velocity.y > 0 ? 20 : -20;
         this.isFlapping = false;
     }
     
-    
-    
-
     destroy() {
+        this.spaceKey.removeAllListeners();
         this.jumpTimer?.remove();
         super.destroy();
     }
 }
 
-export default Bird; 
+export default Bird;

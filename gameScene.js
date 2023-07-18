@@ -11,33 +11,18 @@ class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.on('filecomplete', function (key, type, data) {
-            console.log(key, 'loading completed');
-        });
-    
-        this.load.on('loaderror', function (file) {
-            console.error('Error loading ' + file.src);
-        });
-    
+        console.log('GameScene preload');
         this.load.image('bird', 'bird.png');
         this.load.image('obstacle', 'obstacle.png');
         this.load.image('bg1', 'bg1.png');
         this.load.image('bg2', 'bg2.png');
     }
     
-
     create() {
+        console.log('GameScene create');
         this.addParallaxBackground();
 
-        // If the bird doesn't exist, create a new bird.
-        if(!this.bird) {
-            this.bird = new Bird(this, 100, 300, 'bird');
-        } else {
-            // If the bird exists, reset its position and velocity
-            this.bird.setPosition(100, 300);
-            this.bird.setVelocity(0);
-            this.bird.setGravityY(800);
-        }
+        this.bird = new Bird(this, 100, 300, 'bird');
 
         this.obstacleGroup = this.physics.add.group({ classType: Obstacle });
 
@@ -47,7 +32,6 @@ class GameScene extends Phaser.Scene {
 
         this.startGame();
 
-        // Handle player input.
         this.input.on('pointerdown', () => {
             this.bird.flap();
         });
@@ -76,15 +60,26 @@ class GameScene extends Phaser.Scene {
     }
 
     generateObstacle() {
-        const obstacle = this.obstacleGroup.get(800, Phaser.Math.Between(100, 500), 'obstacle');
-    
-        if (obstacle) {
-            obstacle.setActive(true).setVisible(true);
-            obstacle.enableBody(true, obstacle.x, obstacle.y, true, true);
-            obstacle.setVelocityX(-200);
-            obstacle.passed = false; // reset the passed property when the obstacle becomes active again
-        } else {
-            console.log("Max group size reached.");
+        const gapPosition = Phaser.Math.Between(100, 400); // Random position for gap
+        const gapSize = 200; // Size of gap
+
+        // Upper obstacle
+        const upperObstacle = this.obstacleGroup.get(800, gapPosition - gapSize / 2, 'obstacle');
+        if (upperObstacle) {
+            upperObstacle.setActive(true).setVisible(true);
+            upperObstacle.enableBody(true, upperObstacle.x, upperObstacle.y, true, true);
+            upperObstacle.setVelocityX(-200);
+            upperObstacle.passed = false; 
+            upperObstacle.setFlipY(true); // Flip to make it look like a top pipe
+        }
+
+        // Lower obstacle
+        const lowerObstacle = this.obstacleGroup.get(800, gapPosition + gapSize / 2, 'obstacle');
+        if (lowerObstacle) {
+            lowerObstacle.setActive(true).setVisible(true);
+            lowerObstacle.enableBody(true, lowerObstacle.x, lowerObstacle.y, true, true);
+            lowerObstacle.setVelocityX(-200);
+            lowerObstacle.passed = false;
         }
     }
 
@@ -95,8 +90,14 @@ class GameScene extends Phaser.Scene {
 
     gameOver() {
         console.log('Game over');
-        this.obstacleTimer.paused = true;
         this.physics.pause();
+
+        // Clear the obstacle group to avoid collision callback being called after game over
+        this.obstacleGroup.clear(true, true);
+
+        // Reset score
+        this.score = 0;
+
         this.scene.start('GameOverScene', { score: this.score });
     }
 
